@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth & RBAC Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .card {
+      background: #f9f9f9;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section {
+      margin-bottom: 30px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    #output {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .success {
+      color: #27ae60;
+    }
+    .error {
+      color: #e74c3c;
+    }
+    .info {
+      color: #3498db;
+    }
+    .warning {
+      color: #f39c12;
+    }
+  </style>
+</head>
+<body>
+  <h1>Authentication & RBAC Test</h1>
+  
+  <div class="card">
+    <h2>Test Configuration</h2>
+    <div>
+      <label for="apiUrl">API Base URL:</label>
+      <input type="text" id="apiUrl" value="http://localhost:8000" style="width: 300px; padding: 5px;">
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Authentication Tests</h2>
+    <button id="testRegister">Test Registration</button>
+    <button id="testLogin">Test Login</button>
+    <button id="testProfile">Test Profile</button>
+    <button id="testLogout">Test Logout</button>
+  </div>
+
+  <div class="test-section">
+    <h2>RBAC Tests</h2>
+    <button id="testRoles">Test Roles</button>
+    <button id="testProviderAccess">Test Provider Access</button>
+    <button id="testPermissions">Test Permissions</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Run All Tests</h2>
+    <button id="runAllTests">Run All Tests</button>
+    <button id="clearOutput">Clear Output</button>
+  </div>
+
+  <h2>Test Output</h2>
+  <div id="output"></div>
+
+  <script>
+    // Test configuration
+    const TEST_EMAIL = 'test@example.com';
+    const TEST_PASSWORD = 'Password123!';
+    const TEST_NAME = 'Test User';
+    
+    // Output element
+    const output = document.getElementById('output');
+    const apiUrlInput = document.getElementById('apiUrl');
+    
+    // Log functions
+    function log(message, type = 'info') {
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = message;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    }
+    
+    function logSuccess(message) {
+      log(`✅ ${message}`, 'success');
+    }
+    
+    function logError(message) {
+      log(`❌ ${message}`, 'error');
+    }
+    
+    function logInfo(message) {
+      log(`ℹ️ ${message}`, 'info');
+    }
+    
+    function logWarning(message) {
+      log(`⚠️ ${message}`, 'warning');
+    }
+    
+    // API functions
+    async function apiRequest(endpoint, method = 'GET', body = null, token = null) {
+      const baseUrl = apiUrlInput.value.trim();
+      const url = `${baseUrl}${endpoint}`;
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const options = {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null
+      };
+      
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'API request failed';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = errorText || response.statusText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      return response.json();
+    }
+    
+    // Authentication functions
+    async function register() {
+      logInfo('Attempting to register user...');
+      try {
+        const result = await apiRequest('/api/auth/register', 'POST', {
+          name: TEST_NAME,
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD
+        });
+        logSuccess('Registration successful');
+        logInfo(`User: ${JSON.stringify(result.user, null, 2)}`);
+        localStorage.setItem('auth_token', result.access_token);
+        return result;
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          logWarning('User already exists, continuing with login test');
+        } else {
+          logError(`Registration failed: ${error.message}`);
+          throw error;
+        }
+      }
+    }
+    
+    async function login() {
+      logInfo('Attempting to login...');
+      try {
+        // Create FormData object for OAuth2 compatibility
+        const formData = new URLSearchParams();
+        formData.append('username', TEST_EMAIL);
+        formData.append('password', TEST_PASSWORD);
+        
+        const baseUrl = apiUrlInput.value.trim();
+        const url = `${baseUrl}/api/auth/login`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = 'Login failed';
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (e) {
+            errorMessage = errorText || response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const result = await response.json();
+        logSuccess('Login successful');
+        logInfo(`Access token: ${result.access_token.substring(0, 20)}...`);
+        localStorage.setItem('auth_token', result.access_token);
+        
+        // Get user profile after login
+        const profile = await getProfile();
+        logInfo(`User: ${JSON.stringify(profile, null, 2)}`);
+        
+        return result;
+      } catch (error) {
+        logError(`Login failed: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    async function getProfile() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Not authenticated');
+        throw new Error('Not authenticated');
+      }
+      
+      logInfo('Fetching user profile...');
+      try {
+        const profile = await apiRequest('/api/users/me', 'GET', null, token);
+        logSuccess('Profile fetched successfully');
+        logInfo(`Profile: ${JSON.stringify(profile, null, 2)}`);
+        return profile;
+      } catch (error) {
+        logError(`Failed to fetch profile: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    function logout() {
+      logInfo('Logging out...');
+      localStorage.removeItem('auth_token');
+      logSuccess('Logged out successfully');
+    }
+    
+    // RBAC functions
+    async function getRoles() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Not authenticated');
+        throw new Error('Not authenticated');
+      }
+      
+      logInfo('Fetching roles...');
+      try {
+        const roles = await apiRequest('/api/roles', 'GET', null, token);
+        logSuccess('Roles fetched successfully');
+        logInfo(`Roles: ${JSON.stringify(roles, null, 2)}`);
+        return roles;
+      } catch (error) {
+        if (error.message.includes('Unauthorized')) {
+          logWarning('User does not have permission to view roles (expected for non-admin)');
+        } else {
+          logError(`Failed to fetch roles: ${error.message}`);
+          throw error;
+        }
+      }
+    }
+    
+    async function getProviderAccess() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Not authenticated');
+        throw new Error('Not authenticated');
+      }
+      
+      logInfo('Fetching provider access...');
+      try {
+        const access = await apiRequest('/api/provider-access', 'GET', null, token);
+        logSuccess('Provider access fetched successfully');
+        logInfo(`Access: ${JSON.stringify(access, null, 2)}`);
+        return access;
+      } catch (error) {
+        logError(`Failed to fetch provider access: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    // Event listeners
+    document.getElementById('testRegister').addEventListener('click', async () => {
+      try {
+        await register();
+      } catch (error) {
+        // Error already logged
+      }
+    });
+    
+    document.getElementById('testLogin').addEventListener('click', async () => {
+      try {
+        await login();
+      } catch (error) {
+        // Error already logged
+      }
+    });
+    
+    document.getElementById('testProfile').addEventListener('click', async () => {
+      try {
+        await getProfile();
+      } catch (error) {
+        // Error already logged
+      }
+    });
+    
+    document.getElementById('testLogout').addEventListener('click', () => {
+      logout();
+    });
+    
+    document.getElementById('testRoles').addEventListener('click', async () => {
+      try {
+        await getRoles();
+      } catch (error) {
+        // Error already logged
+      }
+    });
+    
+    document.getElementById('testProviderAccess').addEventListener('click', async () => {
+      try {
+        await getProviderAccess();
+      } catch (error) {
+        // Error already logged
+      }
+    });
+    
+    document.getElementById('testPermissions').addEventListener('click', async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Not authenticated');
+        return;
+      }
+      
+      logInfo('Testing permissions...');
+      logInfo('This is a client-side check only, as permissions are typically checked server-side');
+      
+      // In a real app, you would have proper permission checking
+      logInfo('Checking if user has view:prompts permission...');
+      logInfo('Checking if user has AWS provider access...');
+      
+      try {
+        // Get the user profile to check if admin
+        const profile = await getProfile();
+        if (profile.is_admin) {
+          logSuccess('User is an admin, should have all permissions');
+        } else {
+          logInfo('User is not an admin, permissions depend on role assignments');
+        }
+      } catch (error) {
+        logError(`Failed to check permissions: ${error.message}`);
+      }
+    });
+    
+    document.getElementById('runAllTests').addEventListener('click', async () => {
+      log('\n🚀 Running all tests...', 'info');
+      
+      try {
+        await register();
+        await login();
+        await getProfile();
+        await getRoles();
+        await getProviderAccess();
+        
+        // Test permissions
+        document.getElementById('testPermissions').click();
+        
+        // Don't logout at the end to allow further testing
+        logSuccess('\nAll tests completed!');
+      } catch (error) {
+        logError(`\nTest suite failed: ${error.message}`);
+      }
+    });
+    
+    document.getElementById('clearOutput').addEventListener('click', () => {
+      output.innerHTML = '';
+      logInfo('Output cleared');
+    });
+    
+    // Initial message
+    logInfo('Authentication & RBAC Test Suite');
+    logInfo('Configure the API URL above and click the test buttons to begin');
+  </script>
+</body>
+</html>

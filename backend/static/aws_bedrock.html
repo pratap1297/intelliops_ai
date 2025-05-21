@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Bedrock Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: none;
+            margin-top: 15px;
+            color: #666;
+        }
+        .error {
+            color: #d9534f;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AWS Bedrock Test</h1>
+    
+    <div class="form-group">
+        <label for="message">Message:</label>
+        <textarea id="message" placeholder="Enter your message to AWS Bedrock">How do I create an S3 bucket?</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="agent-id">Agent ID (optional):</label>
+        <input type="text" id="agent-id" placeholder="e.g., NOPNUNTEOB">
+    </div>
+    
+    <div class="form-group">
+        <label for="agent-alias-id">Agent Alias ID (optional):</label>
+        <input type="text" id="agent-alias-id" placeholder="e.g., UHMWSV1HUM">
+    </div>
+    
+    <button id="send-message">Send Message</button>
+    <div id="loading" class="loading">Processing your request...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="response" class="response" style="display: none;"></div>
+
+    <script>
+        document.getElementById('send-message').addEventListener('click', async () => {
+            const message = document.getElementById('message').value.trim();
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            const agentId = document.getElementById('agent-id').value.trim();
+            const agentAliasId = document.getElementById('agent-alias-id').value.trim();
+            
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const responseElement = document.getElementById('response');
+            
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            responseElement.style.display = 'none';
+            
+            try {
+                // Build the URL with query parameters
+                let url = `/api/aws-bedrock/test?message=${encodeURIComponent(message)}`;
+                if (agentId) {
+                    url += `&agent_id=${encodeURIComponent(agentId)}`;
+                }
+                if (agentAliasId) {
+                    url += `&agent_alias_id=${encodeURIComponent(agentAliasId)}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseElement.textContent = data.response;
+                    responseElement.style.display = 'block';
+                } else {
+                    errorElement.textContent = data.detail || 'An error occurred';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

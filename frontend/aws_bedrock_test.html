@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Bedrock Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: none;
+            margin-top: 15px;
+            color: #666;
+        }
+        .error {
+            color: #d9534f;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            border-radius: 4px;
+        }
+        .config-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background-color: #f1f1f1;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>AWS Bedrock Test Interface</h1>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="simple">Simple Test</div>
+        <div class="tab" data-tab="advanced">Advanced Options</div>
+        <div class="tab" data-tab="config">Configuration</div>
+    </div>
+    
+    <div id="simple" class="tab-content active">
+        <div class="form-group">
+            <label for="message">Message:</label>
+            <textarea id="message" placeholder="Enter your message to AWS Bedrock">How do I create an S3 bucket?</textarea>
+        </div>
+        
+        <button id="send-simple">Send Message</button>
+        <div id="loading-simple" class="loading">Processing your request...</div>
+        <div id="error-simple" class="error" style="display: none;"></div>
+        <div id="response-simple" class="response" style="display: none;"></div>
+    </div>
+    
+    <div id="advanced" class="tab-content">
+        <div class="form-group">
+            <label for="advanced-message">Message:</label>
+            <textarea id="advanced-message" placeholder="Enter your message to AWS Bedrock">What EC2 instance types are available?</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="session-id">Session ID (optional):</label>
+            <input type="text" id="session-id" placeholder="Leave empty to generate automatically">
+        </div>
+        
+        <div class="form-group">
+            <label for="aws-access-key">AWS Access Key (optional):</label>
+            <input type="text" id="aws-access-key" placeholder="Leave empty to use .env file">
+        </div>
+        
+        <div class="form-group">
+            <label for="aws-secret-key">AWS Secret Key (optional):</label>
+            <input type="text" id="aws-secret-key" placeholder="Leave empty to use .env file">
+        </div>
+        
+        <div class="form-group">
+            <label for="aws-region">AWS Region (optional):</label>
+            <input type="text" id="aws-region" placeholder="e.g., us-east-1">
+        </div>
+        
+        <div class="form-group">
+            <label for="agent-id">Agent ID (optional):</label>
+            <input type="text" id="agent-id" placeholder="e.g., NOPNUNTEOB">
+        </div>
+        
+        <div class="form-group">
+            <label for="agent-alias-id">Agent Alias ID (optional):</label>
+            <input type="text" id="agent-alias-id" placeholder="e.g., UHMWSV1HUM">
+        </div>
+        
+        <button id="send-advanced">Send Message</button>
+        <div id="loading-advanced" class="loading">Processing your request...</div>
+        <div id="error-advanced" class="error" style="display: none;"></div>
+        <div id="response-advanced" class="response" style="display: none;"></div>
+    </div>
+    
+    <div id="config" class="tab-content">
+        <button id="load-config">Load Current Configuration</button>
+        <div id="config-info" class="config-info" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Simple test functionality
+        document.getElementById('send-simple').addEventListener('click', async () => {
+            const message = document.getElementById('message').value.trim();
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            const loadingElement = document.getElementById('loading-simple');
+            const errorElement = document.getElementById('error-simple');
+            const responseElement = document.getElementById('response-simple');
+            
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            responseElement.style.display = 'none';
+            
+            try {
+                const response = await fetch(`http://127.0.0.1:8002/test?message=${encodeURIComponent(message)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseElement.textContent = data.response;
+                    responseElement.style.display = 'block';
+                } else {
+                    errorElement.textContent = data.detail || 'An error occurred';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        });
+
+        // Advanced test functionality
+        document.getElementById('send-advanced').addEventListener('click', async () => {
+            const message = document.getElementById('advanced-message').value.trim();
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            const loadingElement = document.getElementById('loading-advanced');
+            const errorElement = document.getElementById('error-advanced');
+            const responseElement = document.getElementById('response-advanced');
+            
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            responseElement.style.display = 'none';
+            
+            const payload = {
+                message: message,
+                session_id: document.getElementById('session-id').value.trim() || null,
+                aws_access_key: document.getElementById('aws-access-key').value.trim() || null,
+                aws_secret_key: document.getElementById('aws-secret-key').value.trim() || null,
+                aws_region: document.getElementById('aws-region').value.trim() || null,
+                agent_id: document.getElementById('agent-id').value.trim() || null,
+                agent_alias_id: document.getElementById('agent-alias-id').value.trim() || null
+            };
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8002/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseElement.textContent = data.response;
+                    responseElement.style.display = 'block';
+                    // Update session ID field if it was generated
+                    if (!document.getElementById('session-id').value.trim()) {
+                        document.getElementById('session-id').value = data.session_id;
+                    }
+                } else {
+                    errorElement.textContent = data.detail || 'An error occurred';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        });
+
+        // Load configuration
+        document.getElementById('load-config').addEventListener('click', async () => {
+            const configInfoElement = document.getElementById('config-info');
+            configInfoElement.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8002/config');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    configInfoElement.innerHTML = `
+                        <h3>Current Configuration</h3>
+                        <p><strong>AWS Region:</strong> ${data.aws_region}</p>
+                        <p><strong>Default Agent ID:</strong> ${data.default_agent_id}</p>
+                        <p><strong>Default Agent Alias ID:</strong> ${data.default_agent_alias_id}</p>
+                        <p><strong>AWS Credentials Configured:</strong> ${data.aws_credentials_configured ? 'Yes' : 'No'}</p>
+                    `;
+                    configInfoElement.style.display = 'block';
+                } else {
+                    alert('Failed to load configuration');
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyo
+
+# Environment & secrets
+.env
+.env.*
+*.secret
+*.bak
+*.tmp
+
+# Database & data
+*.sqlite3
+*.db
+*.db-journal
+*.csv
+*.tsv
+*.sqlite
+*.pkl
+*.h5
+*.npy
+*.npz
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Coverage & test
+htmlcov/
+.coverage
+.tox/
+.nox/
+.cache/
+pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Misc
+*.log
+*.log.*
+*.pid
+*.seed
+*.orig
+*.swp
+*.swo
+
+# Ignore documentation builds
+_build/
+docs/_build/
+*.pdf
+
+# Ignore markdown artifacts (if generated)
+*.md.bak

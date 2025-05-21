@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Bedrock Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info-box {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AWS Bedrock Settings</h1>
+    
+    <div class="info-box">
+        <p><strong>Note:</strong> AWS credentials (Access Key and Secret Key) are loaded from your .env file. You only need to configure the Bedrock agent ID and agent alias ID here.</p>
+    </div>
+    
+    <div class="form-group">
+        <label for="agent-id">Bedrock Agent ID:</label>
+        <input type="text" id="agent-id" placeholder="e.g., NOPNUNTEOB">
+    </div>
+    
+    <div class="form-group">
+        <label for="agent-alias-id">Bedrock Agent Alias ID:</label>
+        <input type="text" id="agent-alias-id" placeholder="e.g., UHMWSV1HUM">
+    </div>
+    
+    <button id="save-settings">Save Settings</button>
+    <button id="load-settings">Load Current Settings</button>
+    
+    <div id="message" class="message" style="display: none;"></div>
+
+    <script>
+        // Load current settings when page loads
+        document.addEventListener('DOMContentLoaded', loadSettings);
+        
+        // Add event listeners
+        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        document.getElementById('load-settings').addEventListener('click', loadSettings);
+        
+        // Function to load current settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/aws-settings/');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('agent-id').value = data.agent_id;
+                    document.getElementById('agent-alias-id').value = data.agent_alias_id;
+                    showMessage('Current settings loaded successfully.', 'success');
+                } else {
+                    showMessage('Error loading settings: ' + (data.detail || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+        
+        // Function to save settings
+        async function saveSettings() {
+            const agentId = document.getElementById('agent-id').value.trim();
+            const agentAliasId = document.getElementById('agent-alias-id').value.trim();
+            
+            if (!agentId || !agentAliasId) {
+                showMessage('Please enter both Agent ID and Agent Alias ID.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/aws-settings/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        agent_id: agentId,
+                        agent_alias_id: agentAliasId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Settings saved successfully!', 'success');
+                } else {
+                    showMessage('Error saving settings: ' + (data.detail || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+        
+        // Function to show messages
+        function showMessage(text, type) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+            
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
