@@ -81,14 +81,30 @@ export function handleApiError(error: any): ApiErrorType {
 export async function enhancedHandleResponse(response: Response) {
   if (!response.ok) {
     const errorText = await response.text();
+    console.log('[APIErrorHandler] Original errorText:', errorText); // Cascade Log 1
     let errorMessage = 'API request failed';
     
     try {
       const errorData = JSON.parse(errorText);
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+      console.log('[APIErrorHandler] Parsed errorData:', errorData, 'Type:', typeof errorData); // Cascade Log 2
+      if (typeof errorData === 'object' && errorData !== null) {
+        // Handle nested error messages
+        errorMessage = String(
+          errorData.detail ||
+          errorData.message ||
+          (errorData.error && typeof errorData.error === 'object' ? JSON.stringify(errorData.error) : errorData.error) ||
+          JSON.stringify(errorData) ||
+          errorMessage
+        );
+        console.log('[APIErrorHandler] Parts: detail:', errorData.detail, 'message:', errorData.message, 'error:', errorData.error); // Cascade Log 3
+      } else {
+        errorMessage = String(errorData || errorMessage);
+      }
     } catch (e) {
-      errorMessage = errorText || response.statusText || errorMessage;
+      console.log('[APIErrorHandler] JSON.parse failed. Error:', e); // Cascade Log 4
+      errorMessage = String(errorText || response.statusText || errorMessage);
     }
+    console.log('[APIErrorHandler] Intermediate errorMessage:', errorMessage); // Cascade Log 5
     
     // Check for deactivated account error
     if (
@@ -130,7 +146,16 @@ export async function enhancedHandleResponse(response: Response) {
       // We don't need to redirect here since the modal will handle it
     }
     
-    throw new Error(errorMessage);
+    // Handle specific error cases
+    if (response.status === 401) {
+      // For login failures, provide a user-friendly message
+      throw new Error('Invalid email or password. Please try again.');
+    } else {
+      // For other errors, make sure we're not passing an object directly to the Error constructor
+      const finalErrorMessage = typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : String(errorMessage);
+      console.log('[APIErrorHandler] Final errorMessage before throw:', finalErrorMessage);
+      throw new Error(finalErrorMessage);
+    }
   }
   
   return response.json();

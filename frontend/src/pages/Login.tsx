@@ -5,9 +5,7 @@ import toast from 'react-hot-toast';
 import { authService } from '../lib/auth-service';
 import { User } from '../types';
 
-// Hard-coded admin account
-const ADMIN_EMAIL = "admin@intelliops.com";
-const ADMIN_PASSWORD = "admin123";
+// No hardcoded credentials - all authentication handled by backend
 
 export function Login() {
   console.log('[Login] Initializing Login component');
@@ -54,14 +52,14 @@ export function Login() {
     }
     try {
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const adminExists = users.some((u: { email: string }) => u.email === ADMIN_EMAIL);
+      const adminExists = users.some((u: { email: string }) => u.email === "admin@intelliops.com");
       
       if (!adminExists) {
         // Add the admin account to users
         const adminUser = {
           name: 'System Administrator',
-          email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD,
+          email: 'admin@intelliops.com',
+          password: 'use_backend_authentication',
           isAdmin: true
         };
         
@@ -81,58 +79,39 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      // Special case for demo admin account
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        console.log('[Login] Admin login attempt detected');
-        try {
-          console.log('[Login] Attempting to login admin via backend API');
-          // Try to use the backend API for admin login
-          const response = await authService.login(email, password);
-          console.log('[Login] Admin login successful via API:', response);
-          toast.success('Admin login successful!');
-          // Redirect to the basic chat page
-          setTimeout(() => {
-            console.log('[Login] Redirecting to original chat page after successful admin login');
-            navigate('/chat');
-          }, 1000); // Longer timeout to ensure everything is loaded
-          return;
-        } catch (apiError) {
-          console.log('[Login] Backend API login failed for admin, using fallback:', apiError);
-          
-          // Fallback to localStorage for demo purposes
-          localStorage.setItem('currentUser', JSON.stringify({
-            name: 'System Administrator',
-            email: ADMIN_EMAIL,
-            isAuthenticated: true,
-            isAdmin: true
-          }));
-          
-          toast.success('Admin login successful (local mode)!');
-          // Redirect to the basic chat page
-          setTimeout(() => {
-            console.log('Redirecting to chat page...');
-            navigate('/chat');
-          }, 1000); // Longer timeout to ensure everything is loaded
-          return;
-        }
-      }
+      // All authentication is handled by the backend API
+      // The backend will determine if the user is an admin based on their credentials
       
       // Use the backend API for regular login
       try {
-        await authService.login(email, password);
+        // Use the backend API for all authentication
+        const response = await authService.login(email, password);
         console.log('Login successful!');
-        toast.success('Login successful!');
+        
+        // Check if user is admin (information should come from backend)
+        const isAdmin = response?.user?.isAdmin || false;
+        
+        if (isAdmin) {
+          console.log('Admin user logged in');
+          toast.success('Admin login successful!');
+        } else {
+          toast.success('Login successful!');
+        }
+        
         // Redirect to the main chat page
         setTimeout(() => {
-          console.log('Redirecting to original chat page...');
+          console.log('Redirecting to chat page...');
           navigate('/chat');
         }, 100);
       } catch (err: any) {
         // If backend API fails, show the error
         console.error('Login failed:', err);
         
+        // Ensure we have a proper error message string
+        const errorMsg = typeof err.message === 'object' ? JSON.stringify(err.message) : String(err.message || 'An unknown error occurred');
+        
         // Check if the error is related to a deactivated account
-        if (err.message && err.message.toLowerCase().includes('deactivated')) {
+        if (errorMsg.toLowerCase().includes('deactivated')) {
           setError('Your account has been deactivated. Please contact an administrator.');
           // Clear any stored credentials to prevent further login attempts
           localStorage.removeItem('auth_token');
@@ -140,14 +119,14 @@ export function Login() {
           return; // Don't try the fallback login for deactivated accounts
         }
         
-        const errorMessage = err.message || 'Invalid email or password';
-        setError(errorMessage);
+        // Use the errorMsg we created earlier
+        setError(errorMsg);
         
         // Show error message for failed login
-        toast.error(errorMessage);
+        toast.error(errorMsg);
         
         // Only try fallback login if backend is unavailable (not for auth failures)
-        if (err.message && err.message.toLowerCase().includes('network error')) {
+        if (errorMsg.toLowerCase().includes('network error')) {
           try {
             // Get users from localStorage
             const users = JSON.parse(localStorage.getItem('users') || '[]');

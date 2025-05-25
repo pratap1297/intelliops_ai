@@ -17,17 +17,16 @@ from . import crud
 # Import directly from utils.py
 import os
 
-# JWT Settings from environment variables or defaults
-SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")  # Default secret key for development
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-
 load_dotenv()
 
-# Ensure SECRET_KEY and ALGORITHM are available
+# JWT Settings from environment variables
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+
+# Ensure SECRET_KEY is available
 if not SECRET_KEY:
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning("SECRET_KEY not found in environment variables. Using default key from utils.py")
+    logger.error("SECRET_KEY not found in environment variables. This is a critical security issue.")
+    raise ValueError("SECRET_KEY environment variable must be set for secure JWT operations")
 
 # Use correct token URL with leading slash
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")

@@ -9,13 +9,17 @@ from sqlalchemy.orm import Session
 load_dotenv()
 
 # JWT Settings
-SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")  # Default secret key for development
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
-# Print warning if using default secret key
-if SECRET_KEY == "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7":
-    print("WARNING: Using default SECRET_KEY. This is insecure for production environments.")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be set in the environment or .env file.")
+if not ALGORITHM:
+    raise RuntimeError("ALGORITHM must be set in the environment or .env file.")
+if not ACCESS_TOKEN_EXPIRE_MINUTES:
+    raise RuntimeError("ACCESS_TOKEN_EXPIRE_MINUTES must be set in the environment or .env file.")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(ACCESS_TOKEN_EXPIRE_MINUTES)
 
 # Password hashing
 # Using sha256_crypt instead of bcrypt to avoid compatibility issues

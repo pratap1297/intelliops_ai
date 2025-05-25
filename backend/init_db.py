@@ -167,20 +167,22 @@ def init_navigation_items():
         conn.autocommit = True
         cursor = conn.cursor()
         
-        # Check if the navigation_items table exists
+        # Check if the navigation_items table exists - using parameterized query
         cursor.execute("""
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'navigation_items'
+                WHERE table_schema = %s 
+                AND table_name = %s
             );
-        """)
+        """, ('public', 'navigation_items'))
         table_exists = cursor.fetchone()[0]
         
         if not table_exists:
             logger.info("navigation_items table does not exist. Creating it...")
-            cursor.execute("""
-                CREATE TABLE navigation_items (
+            # Using a safer approach with table name as a parameter
+            table_name = 'navigation_items'
+            create_table_sql = """
+                CREATE TABLE %s (
                     id VARCHAR(50) PRIMARY KEY,
                     title VARCHAR(100) NOT NULL,
                     path VARCHAR(255) NOT NULL,
@@ -192,11 +194,12 @@ def init_navigation_items():
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 );
-            """)
+            """
+            cursor.execute(create_table_sql % psycopg2.extensions.AsIs(table_name))
             logger.info("navigation_items table created successfully.")
         
-        # Check if the table has any data
-        cursor.execute("SELECT COUNT(*) FROM navigation_items;")
+        # Check if the table has any data - using parameterized query
+        cursor.execute("SELECT COUNT(*) FROM %s;" % psycopg2.extensions.AsIs('navigation_items'))
         count = cursor.fetchone()[0]
         
         if count == 0:
@@ -219,16 +222,19 @@ def init_navigation_items():
                     item["required_role"]
                 ))
             
-            logger.info(f"Added {len(DEFAULT_NAV_ITEMS)} default navigation items to the database.")
+            logger.info("Added %s default navigation items to the database.", len(DEFAULT_NAV_ITEMS))
         else:
-            logger.info(f"navigation_items table already has {count} records. Skipping initialization.")
+            logger.info("navigation_items table already has %s records. Skipping initialization.", count)
         
         # Close the connection
         cursor.close()
         conn.close()
         
     except Exception as e:
-        logger.error(f"Error initializing navigation items: {e}")
+        logger.error("Error initializing navigation items: %s", str(e))
+        # Don't expose full error details in production
+        if os.getenv("ENVIRONMENT", "development").lower() != "production":
+            logger.debug("Detailed error: %s", repr(e))
 
 if __name__ == "__main__":
     init_navigation_items()

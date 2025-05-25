@@ -41,10 +41,10 @@ apiClient.interceptors.response.use(
     // Check if it's a 401 Unauthorized error
     if (error.response && error.response.status === 401) {
       // Get the error message
-      const errorMessage = error.response.data?.detail || 
-                         error.response.data?.message || 
+      const errorMessage = (error.response?.data?.detail || 
+                         error.response?.data?.message || 
                          error.message || 
-                         'Unauthorized';
+                         'Unauthorized').toString();
       
       console.log('401 error detected in promptService:', errorMessage);
       

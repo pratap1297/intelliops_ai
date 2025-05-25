@@ -10,6 +10,13 @@ export const SessionExpiredModal: React.FC<SessionExpiredModalProps> = ({ show, 
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
   
+  // Reset countdown when modal is shown
+  useEffect(() => {
+    if (show) {
+      setCountdown(5);
+    }
+  }, [show]);
+  
   useEffect(() => {
     if (show) {
       // Start countdown
@@ -18,7 +25,8 @@ export const SessionExpiredModal: React.FC<SessionExpiredModalProps> = ({ show, 
           if (prev <= 1) {
             clearInterval(timer);
             // Redirect to login page
-            navigate('/login');
+            onClose(); // Close modal first
+            navigate('/login', { replace: true }); // Use replace to prevent back navigation
             return 0;
           }
           return prev - 1;
@@ -29,8 +37,9 @@ export const SessionExpiredModal: React.FC<SessionExpiredModalProps> = ({ show, 
         clearInterval(timer);
       };
     }
-  }, [show, navigate]);
+  }, [show, navigate, onClose]);
   
+  // If not shown, don't render anything
   if (!show) return null;
   
   return (
@@ -45,7 +54,7 @@ export const SessionExpiredModal: React.FC<SessionExpiredModalProps> = ({ show, 
           <button
             onClick={() => {
               onClose();
-              navigate('/login');
+              navigate('/login', { replace: true });
             }}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >

@@ -268,7 +268,7 @@ from sqlalchemy import text
 @app.get("/api/health", tags=["Health"])
 def health_check(db: Session = Depends(get_db)):
     try:
-        db.execute(text("SELECT 1"))
+        db.execute(text("SELECT :value"), {"value": 1})
         return {"status": "ok", "backend": "FastAPI", "database": "PostgreSQL"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}

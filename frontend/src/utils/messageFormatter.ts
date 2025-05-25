@@ -35,6 +35,7 @@ export function formatMessage(content: string): string {
     return formattedContent;
   } catch (error) {
     logger.error('Error formatting message:', error);
-    return content; // Return original content if formatting fails
+    // Always sanitize content even in error cases to prevent XSS
+    return DOMPurify.sanitize(content);
   }
 }
